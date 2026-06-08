@@ -1,0 +1,6 @@
+{
+  "name": "Ece'nin Çiçek Bahçesi",
+  "description": "Ece'ye özel, çiçeklerle ve kelebeklerle dolu sevgi dolu bir web sitesi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
