@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "Message": {
+      "title": "Message",
+      "description": "A message sent between Yusuf and Ece",
+      "type": "object",
+      "properties": {
+        "sender": {
+          "type": "string",
+          "enum": ["Yusuf", "Ece"],
+          "description": "The person who sent the message"
+        },
+        "content": {
+          "type": "string",
+          "description": "The message content"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the message was sent"
+        }
+      },
+      "required": ["sender", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Collection of messages"
+    }
+  }
+}

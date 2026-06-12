@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['sender', 'content', 'createdAt']) 
+        && data.keys().size() == 3
+        && data.sender in ['Yusuf', 'Ece']
+        && data.content is string
+        && data.content.size() <= 5000
+        && data.createdAt is timestamp;
+    }
+
+    match /messages/{messageId} {
+      allow list, get: if true;
+      allow create: if isValidMessage(incoming()); // Relaxed ID check
+      allow delete: if true; 
+      allow update: if false; 
+    }
+    
+    match /test/connection {
+      allow get: if true;
+    }
+  }
+}

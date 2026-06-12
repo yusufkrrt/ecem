@@ -1,7 +1,12 @@
 import { motion, AnimatePresence } from "motion/react";
-import { Flower, Wind, Heart, Star, Bug } from "lucide-react";
+import { Flower, Wind, Heart, Star, Bug, Settings } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import bgPattern from "./assets/images/floral_background_pattern_1780927265149.png";
+import { AdminPanel } from "./components/AdminPanel";
+import { FloatingEnvelope } from "./components/FloatingEnvelope";
+import { db, handleFirestoreError, OperationType } from "./lib/firebase";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { Message } from "./types";
 
 const Petal: React.FC<{ id: number }> = ({ id }) => {
   const [startPos] = useState({ 
@@ -37,7 +42,35 @@ const Petal: React.FC<{ id: number }> = ({ id }) => {
 
 export default function App() {
   const [showLove, setShowLove] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const petals = Array.from({ length: 25 }, (_, i) => i);
+
+  useEffect(() => {
+    // Mesajlar için basit bir dinleyici kuruyoruz, sıralamayı JS tarafında yapacağız 
+    // Bu sayede Firestore indeks hatalarından kaçınmış oluruz.
+    const q = query(collection(db, "messages"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as any)
+      })) as Message[];
+      
+      // Tarihe göre azalan sırada sırala (yeni mesajlar en üstte/önce)
+      const sortedMsgs = msgs.sort((a, b) => {
+        const timeA = b.createdAt?.toMillis?.() || Date.now();
+        const timeB = a.createdAt?.toMillis?.() || Date.now();
+        return timeA - timeB;
+      });
+      
+      setMessages(sortedMsgs);
+    }, (error) => {
+      console.error("Firestore Listen Error:", error);
+      handleFirestoreError(error, OperationType.GET, "messages");
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f7fbff] text-[#243342] font-sans selection:bg-[#A2D2FF] selection:text-white overflow-hidden relative">
@@ -57,8 +90,19 @@ export default function App() {
         <Petal key={id} id={id} />
       ))}
 
+      {/* Floating Envelopes */}
+      {messages.map((msg) => (
+        <FloatingEnvelope key={msg.id} message={msg} />
+      ))}
+
       {/* Header - Clean/Minimal */}
-      <header className="relative z-30 flex justify-end items-center p-8 md:p-12">
+      <header className="relative z-30 flex justify-between items-center p-8 md:p-12">
+        <button 
+          onClick={() => setShowAdmin(true)}
+          className="p-3 opacity-10 hover:opacity-100 transition-opacity text-blue-900 cursor-pointer"
+        >
+          <Settings size={20} />
+        </button>
         <div className="text-xs uppercase tracking-[0.3em] opacity-40 italic font-serif">
           Ömrümün En Güzel Mevsimi
         </div>
@@ -198,17 +242,10 @@ export default function App() {
         </div>
       </footer>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400;1,400;0,700;1,700&display=swap');
-        
-        :root {
-          font-family: 'Outfit', sans-serif;
-        }
-
-        .font-serif {
-          font-family: 'Playfair Display', serif;
-        }
-      `}</style>
+      {/* Admin Panel Overlay */}
+      <AnimatePresence>
+        {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} messages={messages} />}
+      </AnimatePresence>
     </div>
   );
 }
